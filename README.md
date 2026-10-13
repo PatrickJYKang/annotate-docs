@@ -9,21 +9,22 @@ captioned in the page's language.
 
 ## Layout
 
+- `content/<locale>.ts`: the guide text, one file per language (see `content/types.ts` for its structure).
 - `index.html`, `fr/`, `es/`, `zh-CN/`: generated pages. Do not edit them by hand.
-- `assets/`: stylesheet, search and chapter script, icons.
+- `assets/`: stylesheet, search and chapter script, wordmark and icons.
 - `videos/<locale>/<id>.mp4` and `.jpg`: 1440 × 930 H.264 web encodes and their posters.
 - `data/chapters.json`: chapter start times in seconds for each language's complete-workflow video.
 - `scripts/`: the build, the video encoder and a local preview server.
 
 ## Updating
 
-The text comes from the in-app guide in the main repository
-(`webapp/components/userguide/content/<locale>.ts`), so the site and the app say the same thing.
-Text that exists only on the site (the complete-workflow section, the header links) is in
-`scripts/build.mjs`. After changing the guide in the app:
+This repository is the only copy of the guide: the app's **User guide** button opens this site in the
+current UI language. Edit `content/<locale>.ts` (bold UI labels must match the app's catalogs in
+`webapp/lib/i18n/messages` of the main repository), or `scripts/build.mjs` for the page chrome and
+the complete-workflow section, then rebuild and push:
 
 ```sh
-node scripts/build.mjs ../annotate
+node scripts/build.mjs
 ```
 
 The videos are encoded from the recording masters, which are kept outside Git (see

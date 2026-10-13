@@ -1,20 +1,18 @@
-// Builds the static user-guide site from the in-app guide content in the Annotate repository
-// (webapp/components/userguide/content/<locale>.ts), so the site and the app share one text.
-// Writes index.html (English) and fr/, es/, zh-CN/ index pages. Videos come from
-// scripts/encode-videos.mjs; chapter start times for the complete workflow are in data/chapters.json.
-// Usage: node scripts/build.mjs [path/to/annotate]      (default: ../annotate)
+// Builds the static user-guide site from content/<locale>.ts. Writes index.html (English) and the
+// fr/, es/, zh-CN/ index pages. Videos come from scripts/encode-videos.mjs; chapter start times for
+// the complete workflow are in data/chapters.json.
+// Usage: node scripts/build.mjs
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const annotate = path.resolve(process.argv[2] ?? path.join(root, '..', 'annotate'));
-const contentDir = path.join(annotate, 'webapp/components/userguide/content');
+const contentDir = path.join(root, 'content');
 const LOCALES = ['en', 'fr', 'es', 'zh-CN'];
 const content = {};
 for (const locale of LOCALES) content[locale] = Object.values(await import(path.join(contentDir, `${locale}.ts`)))[0];
 const chapters = JSON.parse(readFileSync(path.join(root, 'data/chapters.json'), 'utf8'));
-const wordmarkPath = readFileSync(path.join(annotate, 'brand/wordmark/annotate.svg'), 'utf8').match(/<path[^>]* d="([^"]+)"/)[1];
+const wordmarkPath = readFileSync(path.join(root, 'assets/wordmark.svg'), 'utf8').match(/<path[^>]* d="([^"]+)"/)[1];
 
 const SITE_URL = 'https://patrickjykang.github.io/annotate-docs/';
 const REPO = 'https://github.com/PatrickJYKang/annotate';
@@ -23,7 +21,7 @@ const TUTORIAL_ORDER = [
   'tracking-refinements', 'pin-annotation', 'pin-animations', 'homography', 'presentation-authoring', 'export-recovery',
 ];
 
-// Text that exists only on the website. The rest comes from the app's guide content.
+// Page chrome and the complete-workflow section, per language. The guide itself is in content/.
 const SITE = {
   en: {
     name: 'English',
@@ -31,7 +29,6 @@ const SITE = {
     workflowIntro: 'Every feature in one silent, captioned walkthrough of about 13 minutes, from a new project to a finished presentation. Choose a chapter to jump to it.',
     workflowLink: { label: 'Complete workflow', summary: 'Every feature in one 13-minute walkthrough.', keywords: 'walkthrough full complete whole video' },
     chapters: 'Chapters',
-    videosIntro: 'Each workflow section below includes a short recording of the real app. The recordings are silent and captioned. Select a tutorial to jump to it.',
     download: 'Download',
     source: 'Source code',
     language: 'Language',
@@ -43,7 +40,6 @@ const SITE = {
     workflowIntro: 'Toutes les fonctions en une seule démonstration muette et sous-titrée d’environ 13 minutes, d’un nouveau projet à une présentation terminée. Choisissez un chapitre pour y accéder.',
     workflowLink: { label: 'Parcours complet', summary: 'Toutes les fonctions en une démonstration de 13 minutes.', keywords: 'démonstration complète vidéo parcours' },
     chapters: 'Chapitres',
-    videosIntro: 'Chaque section ci-dessous comprend un court enregistrement de l’application. Les vidéos sont muettes et sous-titrées. Sélectionnez un tutoriel pour y accéder.',
     download: 'Télécharger',
     source: 'Code source',
     language: 'Langue',
@@ -55,7 +51,6 @@ const SITE = {
     workflowIntro: 'Todas las funciones en una sola demostración sin sonido y con subtítulos, de unos 13 minutos, desde un proyecto nuevo hasta una presentación terminada. Elige un capítulo para ir a él.',
     workflowLink: { label: 'Flujo completo', summary: 'Todas las funciones en una demostración de 13 minutos.', keywords: 'demostración completa vídeo flujo' },
     chapters: 'Capítulos',
-    videosIntro: 'Cada sección siguiente incluye una breve grabación de la aplicación real. Las grabaciones no tienen sonido y llevan subtítulos. Selecciona un tutorial para ir a él.',
     download: 'Descargar',
     source: 'Código fuente',
     language: 'Idioma',
@@ -67,7 +62,6 @@ const SITE = {
     workflowIntro: '一段约 13 分钟的无声带字幕演示，涵盖全部功能，从新建项目到完成演示文稿。点击章节即可跳转。',
     workflowLink: { label: '完整工作流程', summary: '13 分钟演示全部功能。', keywords: '完整 演示 视频 流程' },
     chapters: '章节',
-    videosIntro: '下面每个操作章节都附有一段真实应用的简短录像。录像无声，带字幕。点击教程即可跳转。',
     download: '下载',
     source: '源代码',
     language: '语言',
@@ -148,7 +142,7 @@ function page(locale) {
   `<li><button type="button" data-t="${starts[i]}"><span class="time">${clock(starts[i])}</span><span>${esc(c.tutorials[id].title)}</span></button></li>`).join('')}</ol></div>
 </div>`, true),
     section('orientation', overview.title, `${prose(overview.paragraphs)}<div class="cards">${overview.cards.map(([t, b]) => `<div><h3>${esc(t)}</h3><p>${esc(b)}</p></div>`).join('')}</div>`),
-    section('videos', c.videos.title, `<p class="intro">${esc(s.videosIntro)}</p><ol class="index">${TUTORIAL_ORDER.map((id) =>
+    section('videos', c.videos.title, `<p class="intro">${rich(c.videos.intro)}</p><ol class="index">${TUTORIAL_ORDER.map((id) =>
       `<li><a href="#video-${id}"><span class="tag">${num(id)}</span><span><span class="index-title">${esc(c.tutorials[id].title)}</span><span class="index-desc">${esc(c.tutorials[id].description)}</span></span></a></li>`).join('')}</ol>`),
     section('first-project', firstProject.title, `<p class="intro">${esc(firstProject.intro)}</p><ol class="steps">${firstProject.steps.map((step, i) =>
       `<li><span class="tag">${String(i + 1).padStart(2, '0')}</span><div><div class="step-head"><h3>${esc(step.title)}</h3><span class="tag">${esc(step.location)}</span></div><p>${rich(step.action)}</p><p class="result"><strong>${esc(c.ui.result)}</strong> ${esc(step.result)}</p></div></li>`).join('')}</ol>${video('first-project')}`),
